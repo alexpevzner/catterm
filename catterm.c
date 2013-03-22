@@ -65,6 +65,7 @@ usage( const char* error, ... )
     printf(
         "usage:\n"
         "    catterm [options] line\n"
+        "\n"
         "options:\n"
         "    -c       -- suppress control characters on output\n"
         "    -d delay -- delay after each character sent\n"
@@ -73,10 +74,10 @@ usage( const char* error, ... )
         "                    NNNms   - milliseconds\n"
         "                    NNN%%    - percent of character transmit time\n"
         "    -n arg   -- send new line as:\n"
-        "                    lf      - '\\n'\n"
+        "                    lf      - '\\n' (this is default)\n"
         "                    cr      - '\\r'\n"
-        "                    crlf    - '\\r'+'\\n'\n"
-        "                    lfcr    - '\\n'+'\\r'\n"
+        "                    crlf    - '\\r' + '\\n'\n"
+        "                    lfcr    - '\\n' + '\\r'\n"
         "    -s speed -- line speed (default is 9600)\n"
         "    -x char  -- use ctrl-char as exit char (default is ctrl-%s)\n",
         DEFAULT_ESC_CHAR
