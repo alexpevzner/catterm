@@ -121,7 +121,7 @@ parse_speed( char* s )
     opt_tty_speed_absolute = strtoul( s, &end, 0 );
     if( *end )
         goto USAGE;
-        
+
     switch( opt_tty_speed_absolute )
     {
         case 2400:      opt_tty_speed_termio = B2400; return;
@@ -147,7 +147,7 @@ static void
 parse_esc_char( char* s )
 {
     int c;
-    
+
     if( !s[ 0 ] || s[ 1 ] )
         goto USAGE;
 
@@ -244,7 +244,7 @@ parse_argv( int argc, char **argv )
 
             if( !opt_tty_line )
                 panic_perror( "allocation failed" );
-                
+
             strcpy( opt_tty_line, prefix );
             strcat( opt_tty_line, argv[ optind ] );
         }
@@ -272,7 +272,7 @@ tty_open( void )
     mode.c_iflag = IGNBRK | IGNPAR;
     mode.c_oflag = 0;
     mode.c_lflag = 0;
-    
+
     cfsetospeed( &mode, opt_tty_speed_termio );
     cfsetispeed( &mode, opt_tty_speed_termio );
 
@@ -308,7 +308,7 @@ static void
 console_setup( void )
 {
     struct termios      mode;
-    
+
     if( tcgetattr( 0, &mode ) == -1 )
         panic_perror( "tcgetattr(console)" );
 
@@ -473,7 +473,7 @@ uterm( int fd_con_in, int fd_con_out, int fd_tty )
 
         if( FD_ISSET( fd_con_out, &fds_out ) )
         {
-            rc = write( 
+            rc = write(
                 fd_con_out, tty2con_buffer + tty2con_next,
                 tty2con_count - tty2con_next
             );
@@ -491,14 +491,14 @@ int
 main( int argc, char *argv[] )
 {
     int                 fd_tty;
-    
+
     parse_esc_char( DEFAULT_ESC_CHAR );
     parse_argv( argc, argv );
     console_setup();
     fd_tty = tty_open();
 
     uterm( 0, 1, fd_tty );
-   
+
     return 0;
 }
 
