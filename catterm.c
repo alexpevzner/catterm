@@ -19,8 +19,8 @@
 
 #define DEFAULT_ESC_CHAR        "X"
 
-static speed_t                  opt_tty_speed_termio = B9600;
-static unsigned long            opt_tty_speed_absolute = 9600;
+static speed_t                  opt_tty_speed_termio = B115200;
+static unsigned long            opt_tty_speed_absolute = 115200;
 static char                     *opt_tty_line = NULL;
 static bool                     opt_supress_ctrls = false;
 static unsigned long            opt_send_delay = 0;
@@ -78,8 +78,9 @@ usage (const char* error, ...)
         "                    cr      - '\\r'\n"
         "                    crlf    - '\\r' + '\\n'\n"
         "                    lfcr    - '\\n' + '\\r'\n"
-        "    -s speed -- line speed (default is 9600)\n"
+        "    -s speed -- line speed (default is %ld)\n"
         "    -x char  -- use ctrl-char as exit char (default is ctrl-%s)\n",
+        opt_tty_speed_absolute,
         DEFAULT_ESC_CHAR
     );
 
