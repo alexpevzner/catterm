@@ -1,0 +1,10 @@
+.depend
+catterm
+
+tags
+*.o
+*.swp
+core
+core.*
+*.orig
+
