@@ -192,7 +192,7 @@ usage (void)
         DEFAULT_ESC_CHAR
     );
 
-    exit(1);
+    exit(0);
 }
 
 /*
@@ -376,6 +376,10 @@ parse_argv (int argc, char **argv)
     int opt;
 
     /***** Parse options *****/
+    if (argc == 1) {
+        usage();
+    }
+
     while ((opt = getopt(argc, argv, ":cs:x:d:n:t:h")) != EOF) {
         switch (opt) {
             case 'c':
