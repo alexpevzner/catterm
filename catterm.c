@@ -52,17 +52,8 @@ static const char*              program_name = "catterm";
  * Print usage and exit
  */
 static void
-usage (const char* error, ...)
+usage (void)
 {
-    if (error) {
-        va_list ap;
-        va_start( ap, error );
-        printf( "%s: ", program_name );
-        vfprintf( stdout, error, ap );
-        printf( "\n" );
-        va_end( ap );
-    }
-
     printf(
         "usage:\n"
         "    catterm [options] line\n"
@@ -81,9 +72,32 @@ usage (const char* error, ...)
         "                    lfcr    - '\\n' + '\\r'\n"
         "    -s speed -- line speed (default is %ld)\n"
         "    -x char  -- use ctrl-char as exit char (default is ctrl-%s)\n"
-        "    -t file  -- save (\"tee\") output to file\n",
+        "    -t file  -- save (\"tee\") output to file\n"
+        "    -h       -- print this help screen\n",
         opt_tty_speed_absolute,
         DEFAULT_ESC_CHAR
+    );
+
+    exit(1);
+}
+
+/*
+ * Print usage error and exit
+ */
+static void
+usage_error (const char* error, ...)
+{
+    va_list ap;
+    char    buf[4096];
+
+    va_start( ap, error );
+    vsnprintf(buf, sizeof(buf), error, ap);
+    va_end( ap );
+
+    printf(
+        "%s: %s\n"
+        "try %s -h for more information\n",
+        program_name, buf, program_name
     );
 
     exit(1);
@@ -140,7 +154,7 @@ parse_nl_sequence (char* s)
         }
     }
 
-    usage("invalid new line mode -- %s\n", s);
+    usage_error("invalid new line mode -- %s", s);
     return NULL;
 }
 
@@ -171,7 +185,7 @@ parse_speed (char* s)
     return;
 
 USAGE:
-    usage("invalid speed -- %s\n", s);
+    usage_error("invalid speed -- %s", s);
 }
 
 /*
@@ -198,7 +212,7 @@ parse_esc_char (char* s)
     return;
 
 USAGE:
-    usage("invalid exit char -- %s", s);
+    usage_error("invalid exit char -- %s", s);
 }
 
 /*
@@ -217,7 +231,7 @@ parse_delay (const char* s)
     } else if (!strcasecmp(end, "%")) {
         opt_send_delay_relative = true;
     } else {
-        usage( "invalid output delay -- %s", s );
+        usage_error( "invalid output delay -- %s", s );
     }
 }
 
@@ -230,7 +244,7 @@ parse_argv (int argc, char **argv)
     int opt;
 
     /***** Parse options *****/
-    while ((opt = getopt(argc, argv, "cs:x:d:n:t:")) != EOF) {
+    while ((opt = getopt(argc, argv, ":cs:x:d:n:t:h")) != EOF) {
         switch (opt) {
             case 'c':
                 opt_supress_ctrls = true;
@@ -257,8 +271,13 @@ parse_argv (int argc, char **argv)
                 opt_tee_file = mem_strdup(optarg);
                 break;
 
-            default:
-                usage(NULL);
+            case 'h':
+                usage();
+                break;
+
+            case '?':
+                usage_error("invalid option -- -%c", optopt);
+                break;
         }
     }
 
@@ -273,7 +292,7 @@ parse_argv (int argc, char **argv)
     }
 
     /***** Guess device name *****/
-    if (optind < argc) {
+    if (optind + 1 == argc) {
         if (argv[optind][0] == '/') {
             opt_tty_line = argv[optind];
         } else {
@@ -283,8 +302,10 @@ parse_argv (int argc, char **argv)
             strcpy(opt_tty_line, prefix);
             strcat(opt_tty_line, argv[optind]);
         }
+    }else if (optind + 1 < argc) {
+        usage_error("unexpected argument -- %s", argv[optind + 1]);
     } else {
-        usage( NULL );
+        usage_error("missed terminal line");
     }
 }
 
