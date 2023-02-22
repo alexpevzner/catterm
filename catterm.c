@@ -86,6 +86,22 @@ usage (const char* error, ...)
 }
 
 /*
+ * Allocate some memory. Panic on OOM
+ */
+static void*
+mem_alloc (size_t size)
+{
+    void *p = malloc(size);
+
+    if (p == NULL) {
+        panic_perror("allocation failed");
+    }
+
+    memset(p, 0, size);
+    return p;
+}
+
+/*
  * Parse NL sequence (-n option)
  */
 static unsigned const char*
@@ -241,12 +257,7 @@ parse_argv (int argc, char **argv)
         } else {
             char        prefix[] = "/dev/";
 
-            opt_tty_line = malloc(sizeof(prefix) + strlen(argv[optind]));
-
-            if (!opt_tty_line) {
-                panic_perror("allocation failed");
-            }
-
+            opt_tty_line = mem_alloc(sizeof(prefix) + strlen(argv[optind]));
             strcpy(opt_tty_line, prefix);
             strcat(opt_tty_line, argv[optind]);
         }
