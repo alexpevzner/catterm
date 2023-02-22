@@ -1,9 +1,7 @@
-/*
- * Name:        catterm
- * Copyright:   Alexander Pevzner <pzz@pzz.msk.ru>
- * License:     Free for any use
- * Warranty:    None. Program distributed AS IS.
- * Description: catterm is a minimalist terminal emulation program.
+/* catterm -- a minimalist serial line terminal program
+ *
+ * Copyright (C) 2002 and up by Alexander Pevzner (pzz@pzz.msk.ru)
+ * See LICENSE for license terms and conditions
  */
 
 #include <errno.h>
