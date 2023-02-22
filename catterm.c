@@ -28,6 +28,7 @@ static bool                     opt_send_delay_relative = false;
 static unsigned const char      *opt_nl_sequence = NULL;
 static size_t                   opt_nl_size;
 static int                      opt_esc_char;
+static char                     *opt_tee_file = NULL;
 
 static struct termios           saved_console_mode;
 static const char*              program_name = "catterm";
@@ -79,7 +80,8 @@ usage (const char* error, ...)
         "                    crlf    - '\\r' + '\\n'\n"
         "                    lfcr    - '\\n' + '\\r'\n"
         "    -s speed -- line speed (default is %ld)\n"
-        "    -x char  -- use ctrl-char as exit char (default is ctrl-%s)\n",
+        "    -x char  -- use ctrl-char as exit char (default is ctrl-%s)\n"
+        "    -t file  -- save (\"tee\") output to file\n",
         opt_tty_speed_absolute,
         DEFAULT_ESC_CHAR
     );
@@ -100,6 +102,19 @@ mem_alloc (size_t size)
     }
 
     memset(p, 0, size);
+    return p;
+}
+
+/*
+ * Safe version of strdup. Panics on OOM
+ */
+static char*
+mem_strdup (const char *s)
+{
+    size_t sz = strlen(s) + 1;
+    char   *p = mem_alloc(sz);
+
+    memcpy(p, s, sz);
     return p;
 }
 
@@ -215,7 +230,7 @@ parse_argv (int argc, char **argv)
     int opt;
 
     /***** Parse options *****/
-    while ((opt = getopt(argc, argv, "cs:x:d:n:")) != EOF) {
+    while ((opt = getopt(argc, argv, "cs:x:d:n:t:")) != EOF) {
         switch (opt) {
             case 'c':
                 opt_supress_ctrls = true;
@@ -235,6 +250,11 @@ parse_argv (int argc, char **argv)
 
             case 'd':
                 parse_delay(optarg);
+                break;
+
+            case 't':
+                free(opt_tee_file);
+                opt_tee_file = mem_strdup(optarg);
                 break;
 
             default:
@@ -269,10 +289,28 @@ parse_argv (int argc, char **argv)
 }
 
 /*
+ * Open output file. Returns -1, if save to file is not requested
+ */
+static int
+open_tee (void)
+{
+    int fd = -1;
+
+    if (opt_tee_file != NULL) {
+        fd = open(opt_tee_file, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+        if (fd == -1) {
+            panic_perror( "can't open %s", opt_tee_file );
+        }
+    }
+
+    return fd;
+}
+
+/*
  * Open and initialize TTY line
  */
 static int
-tty_open (void)
+open_tty (void)
 {
     int                 fd;
     struct termios      mode;
@@ -372,7 +410,7 @@ suppress_ctrls (unsigned char *buffer, size_t size)
  * microterm - main loop
  */
 static void
-uterm (int fd_con_in, int fd_con_out, int fd_tty)
+uterm (int fd_con_in, int fd_con_out, int fd_tty, int fd_tee)
 {
     unsigned char       con2tty_buffer[1024];
     size_t              con2tty_count = 0;
@@ -426,6 +464,10 @@ uterm (int fd_con_in, int fd_con_out, int fd_tty)
                 panic_perror( "read(tty)" );
             } else if (!rc) {
                 panic( "read(tty): end of input" );
+            }
+
+            if (fd_tee >= 0 && rc > 0) {
+                write(fd_tee, tty2con_buffer, rc);
             }
 
             tty2con_count = rc;
@@ -515,14 +557,19 @@ uterm (int fd_con_in, int fd_con_out, int fd_tty)
 int
 main (int argc, char *argv[])
 {
-    int                 fd_tty;
+    int fd_tty, fd_tee = -1;
 
     parse_esc_char(DEFAULT_ESC_CHAR);
     parse_argv(argc, argv);
-    console_setup();
-    fd_tty = tty_open();
 
-    uterm(0, 1, fd_tty);
+
+
+
+    fd_tee = open_tee();
+    console_setup();
+    fd_tty = open_tty();
+
+    uterm(0, 1, fd_tty, fd_tee);
 
     return 0;
 }
