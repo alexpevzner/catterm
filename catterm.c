@@ -19,8 +19,8 @@
 
 #define DEFAULT_ESC_CHAR        "X"
 
-static speed_t                  opt_tty_speed_termio = B115200;
-static unsigned long            opt_tty_speed_absolute = 115200;
+/***** Static variables -- options *****/
+static unsigned long            opt_tty_speed = 115200;
 static char                     *opt_tty_line = NULL;
 static bool                     opt_supress_ctrls = false;
 static unsigned long            opt_send_delay = 0;
@@ -30,9 +30,119 @@ static size_t                   opt_nl_size;
 static int                      opt_esc_char;
 static char                     *opt_tee_file = NULL;
 
+/***** Static variables -- miscellaneous *****/
 static struct termios           saved_console_mode;
 static const char*              program_name = "catterm";
 
+/***** Bit rate table *****/
+/*
+ * bit_rate represents mapping between bit rate value
+ * and c_flags bits
+ */
+typedef struct {
+    unsigned long rate;    /* Bit rate value, i.e., 9600 */
+    tcflag_t      c_flags; /* c_flags bits, i.e., B9600 */
+} bit_rate;
+
+static bit_rate
+bit_rate_table[] = {
+#ifdef  B50
+    {50, B50},
+#endif
+#ifdef  B75
+    {75, B75},
+#endif
+#ifdef  B110
+    {75, B110},
+#endif
+#ifdef  B134
+    {134, B134},
+#endif
+#ifdef  B150
+    {150, B150},
+#endif
+#ifdef  B200
+    {200, B200},
+#endif
+#ifdef  B300
+    {300, B300},
+#endif
+#ifdef  B600
+    {600, B600},
+#endif
+#ifdef  B1200
+    {1200, B1200},
+#endif
+#ifdef  B1800
+    {1800, B1800},
+#endif
+#ifdef  B2400
+    {2400, B2400},
+#endif
+#ifdef  B4800
+    {4800, B4800},
+#endif
+#ifdef  B9600
+    {9600, B9600},
+#endif
+#ifdef  B19200
+    {19200, B19200},
+#endif
+#ifdef  B38400
+    {38400, B38400},
+#endif
+#ifdef  B57600
+    {57600, B57600},
+#endif
+#ifdef  B115200
+    {115200, B115200},
+#endif
+#ifdef  B230400
+    {230400, B230400},
+#endif
+#ifdef  B460800
+    {460800, B460800},
+#endif
+#ifdef  B500000
+    {500000, B500000},
+#endif
+#ifdef  B576000
+    {576000, B576000},
+#endif
+#ifdef  B921600
+    {921600, B921600},
+#endif
+#ifdef  B1000000
+    {1000000, B1000000},
+#endif
+#ifdef  B1152000
+    {1152000, B1152000},
+#endif
+#ifdef  B1500000
+    {1500000, B1500000},
+#endif
+#ifdef  B2000000
+    {2000000, B2000000},
+#endif
+#ifdef  B2500000 
+    {2500000 , B2500000 },
+#endif
+#ifdef  B3000000
+    {3000000, B3000000},
+#endif
+#ifdef  B3500000
+    {3500000, B3500000},
+#endif
+#ifdef  B4000000
+    {4000000, B4000000},
+#endif
+    {0, 0} /* Must be at the end */
+};
+
+/***** Error handling *****/
+/*
+ * panic with strerror(errno)
+ */
 #define panic_perror(msg...)                            \
     do{                                                 \
         int     err = errno;                            \
@@ -41,6 +151,9 @@ static const char*              program_name = "catterm";
         exit( 1 );                                      \
     }while(0)
 
+/*
+ * panic
+ */
 #define panic(msg...)                                   \
     do{                                                 \
         printf( msg );                                  \
@@ -48,6 +161,7 @@ static const char*              program_name = "catterm";
         exit( 1 );                                      \
     }while(0)
 
+/***** Usage *****/
 /*
  * Print usage and exit
  */
@@ -74,7 +188,7 @@ usage (void)
         "    -x char  -- use ctrl-char as exit char (default is ctrl-%s)\n"
         "    -t file  -- save (\"tee\") output to file\n"
         "    -h       -- print this help screen\n",
-        opt_tty_speed_absolute,
+        opt_tty_speed,
         DEFAULT_ESC_CHAR
     );
 
@@ -103,6 +217,7 @@ usage_error (const char* error, ...)
     exit(1);
 }
 
+/***** Memory allocation *****/
 /*
  * Allocate some memory. Panic on OOM
  */
@@ -132,6 +247,28 @@ mem_strdup (const char *s)
     return p;
 }
 
+/***** Bit rate mapping *****/
+/*
+ * Map bit rate to c_flags
+ *
+ * For unknown/invalid bit rate returns B0
+ */
+static tcflag_t
+bit_rate_to_c_flags (unsigned long rate)
+{
+    int i;
+
+    for (i = 0; bit_rate_table[i].rate != 0; i ++)
+    {
+        if (bit_rate_table[i].rate == rate) {
+            return bit_rate_table[i].c_flags;
+        }
+    }
+
+    return B0;
+}
+
+/***** Command-line arguments parsing *****/
 /*
  * Parse NL sequence (-n option)
  */
@@ -161,31 +298,26 @@ parse_nl_sequence (char* s)
 /*
  * Parse speed (-s option)
  */
-static void
+static unsigned long
 parse_speed (char* s)
 {
-    char                *end;
+    char          *end;
+    unsigned long rate;
 
-    opt_tty_speed_absolute = strtoul( s, &end, 0 );
+    rate = strtoul( s, &end, 0 );
     if (*end) {
         goto USAGE;
     }
 
-    switch (opt_tty_speed_absolute) {
-        case 2400:      opt_tty_speed_termio = B2400; return;
-        case 4800:      opt_tty_speed_termio = B4800; return;
-        case 9600:      opt_tty_speed_termio = B9600; return;
-        case 19200:     opt_tty_speed_termio = B19200; return;
-        case 38400:     opt_tty_speed_termio = B38400; return;
-        case 57600:     opt_tty_speed_termio = B57600; return;
-        case 115200:    opt_tty_speed_termio = B115200; return;
-        default:        goto USAGE;
+    if (bit_rate_to_c_flags(rate) == B0) {
+        goto USAGE;
     }
 
-    return;
+    return rate;
 
 USAGE:
     usage_error("invalid speed -- %s", s);
+    return 0;
 }
 
 /*
@@ -255,7 +387,7 @@ parse_argv (int argc, char **argv)
                 break;
 
             case 's':
-                parse_speed(optarg);
+                opt_tty_speed = parse_speed(optarg);
                 break;
 
             case 'x':
@@ -283,7 +415,7 @@ parse_argv (int argc, char **argv)
 
     /***** Fixup output delay *****/
     if (opt_send_delay_relative) {
-        opt_send_delay = (1000000 * 9) / opt_tty_speed_absolute;
+        opt_send_delay = (1000000 * 9) / opt_tty_speed;
     }
 
     /***** Fixup opt_nl_size *****/
@@ -309,6 +441,7 @@ parse_argv (int argc, char **argv)
     }
 }
 
+/***** Opening files *****/
 /*
  * Open output file. Returns -1, if save to file is not requested
  */
@@ -336,6 +469,7 @@ open_tty (void)
     int                 fd;
     struct termios      mode;
     int                 tmp;
+    speed_t             speed = bit_rate_to_c_flags(opt_tty_speed);
 
     fd = open(opt_tty_line, O_RDWR | O_NONBLOCK | O_NOCTTY);
     if (fd == -1) {
@@ -348,8 +482,8 @@ open_tty (void)
     mode.c_oflag = 0;
     mode.c_lflag = 0;
 
-    cfsetospeed(&mode, opt_tty_speed_termio);
-    cfsetispeed(&mode, opt_tty_speed_termio);
+    cfsetospeed(&mode, speed);
+    cfsetispeed(&mode, speed);
 
     mode.c_cc[VMIN] = 1;
     mode.c_cc[VTIME] = 0;
@@ -369,6 +503,7 @@ open_tty (void)
     return fd;
 }
 
+/***** TTY mode setting *****/
 /*
  * Restore console settins
  */
@@ -401,6 +536,7 @@ console_setup (void)
     }
 }
 
+/***** Miscellaneous helpers *****/
 /*
  * Suppress control characters on input
  *
@@ -427,6 +563,7 @@ suppress_ctrls (unsigned char *buffer, size_t size)
     return size;
 }
 
+/***** Main loop *****/
 /*
  * microterm - main loop
  */
@@ -572,6 +709,7 @@ uterm (int fd_con_in, int fd_con_out, int fd_tty, int fd_tee)
     }
 }
 
+/***** The main function *****/
 /*
  * Main function
  */
@@ -582,9 +720,6 @@ main (int argc, char *argv[])
 
     parse_esc_char(DEFAULT_ESC_CHAR);
     parse_argv(argc, argv);
-
-
-
 
     fd_tee = open_tee();
     console_setup();
