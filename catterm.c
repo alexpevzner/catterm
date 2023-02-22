@@ -27,7 +27,8 @@ static unsigned long            opt_send_delay = 0;
 static bool                     opt_send_delay_relative = false;
 static unsigned const char      *opt_nl_sequence = NULL;
 static size_t                   opt_nl_size;
-static int                      esc_char;
+static int                      opt_esc_char;
+
 static struct termios           saved_console_mode;
 static const char*              program_name = "catterm";
 
@@ -171,11 +172,11 @@ parse_esc_char (char* s)
 
     c = *(unsigned char*) s;
     if (0x40 <= c && c <= 0x5f) {
-        esc_char = c - 0x40;
+        opt_esc_char = c - 0x40;
     }
 
     if (0x60 <= c && c <= 0x7f) {
-        esc_char = c - 0x60;
+        opt_esc_char = c - 0x60;
     }
 
     return;
@@ -438,7 +439,7 @@ uterm (int fd_con_in, int fd_con_out, int fd_tty)
             if (rc < 0) {
                 panic_perror( "read(console)" );
             }
-            if (memchr(con2tty_buffer, esc_char, rc)) {
+            if (memchr(con2tty_buffer, opt_esc_char, rc)) {
                 exit(0);
             }
 
