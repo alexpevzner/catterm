@@ -5,7 +5,7 @@ ports. It's primary target is the people who work a lot with hardware
 platforms that use serial ports for debugging/console etc.
 
 Unlike many other similar programs, `catterm` does absolute minimum. It
-doesn't interpret ESC-sequences, relying on a Linux terminal, does deal
+doesn't interpret ESC-sequences, relying on a Linux terminal, doesn't deal
 phone numbers using modem AT commands and so on.
 
 It's primary purpose is to be simple, stupid, reliable and predictable
