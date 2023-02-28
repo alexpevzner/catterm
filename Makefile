@@ -34,6 +34,7 @@ atnBuffer: atnBuffer.o test-atnBuffer.o
 	$(CC) $(CPPFLAGS) -o $@ $+
 
 $(PROG): $(OBJS)
+	-ctags -R .
 	$(CC) $(CPPFLAGS) -o $@ $+ $(LIBS) $(LDFLAGS)
 
 # Autodependencies
