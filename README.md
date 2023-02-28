@@ -45,8 +45,8 @@ options:
                     NNNms   - milliseconds
                     NNN%    - percent of character transmit time
     -n arg   -- send new line as:
-                    lf      - '\n' (this is default)
-                    cr      - '\r'
+                    lf      - '\n'
+                    cr      - '\r' (this is default)
                     crlf    - '\r' + '\n'
                     lfcr    - '\n' + '\r'
     -s speed -- line speed (default is 115200)

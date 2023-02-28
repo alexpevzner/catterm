@@ -23,8 +23,8 @@ static char                     *opt_tty_line = NULL;
 static bool                     opt_supress_ctrls = false;
 static unsigned long            opt_send_delay = 0;
 static bool                     opt_send_delay_relative = false;
-static unsigned const char      *opt_nl_sequence = NULL;
-static size_t                   opt_nl_size;
+static unsigned const char      *opt_nl_sequence = (unsigned char*) "\r";
+static size_t                   opt_nl_size = 1;
 static int                      opt_esc_char;
 static char                     *opt_tee_file = NULL;
 
@@ -178,8 +178,8 @@ usage (void)
         "                    NNNms   - milliseconds\n"
         "                    NNN%%    - percent of character transmit time\n"
         "    -n arg   -- send new line as:\n"
-        "                    lf      - '\\n' (this is default)\n"
-        "                    cr      - '\\r'\n"
+        "                    lf      - '\\n'\n"
+        "                    cr      - '\\r' (this is default)\n"
         "                    crlf    - '\\r' + '\\n'\n"
         "                    lfcr    - '\\n' + '\\r'\n"
         "    -s speed -- line speed (default is %ld)\n"
